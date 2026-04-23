@@ -1,122 +1,195 @@
-# Project Overview
+# Course Registration Multi-Step Form
 
-This project implements the requested multi-step course registration flow as a small React + TypeScript application.
+## 프로젝트 개요
 
-The experience covers:
+This project implements a multi-step course registration flow using React and TypeScript.
 
-- Step 1 course selection with category filtering, course detail preview, capacity messaging, and application type switching
-- Step 2 applicant data entry with step-scoped validation, conditional group fields, dynamic participant rows, and duplicate email checks
-- Step 3 confirmation with editable summary sections, terms agreement, mock submission, retry handling, and completion screen
-- Resilience features such as local draft recovery through `localStorage` and unsaved-changes warnings for refresh/close/back navigation
+The application simulates a real-world online education enrollment system with a focus on:
 
-# Tech Stack
+* Step-based form navigation
+* Validation strategy (client + server-like)
+* Conditional fields for group applications
+* Data persistence and recovery
+* Error handling and retry flows
 
-- React
-  Reason: a good fit for multi-step UI state, conditional rendering, and componentized review screens.
-- TypeScript
-  Reason: required by the assignment, and especially useful here for discriminating personal vs. group submission payloads.
-- Vite
-  Reason: lightweight setup with fast development/build tooling for a small front-end-only assignment.
-- No external form library
-  Reason: I chose a custom centralized state + validation approach to make the step transitions, conditional resets, and validation policy explicit in the code rather than hiding the decisions behind library abstractions.
+### 주요 기능
 
-# How to Run the Project
+* Step 1: Course selection with category filtering, course preview, and capacity handling
+* Step 2: Applicant information input with validation and conditional group fields
+* Step 3: Confirmation screen with editable sections and submission handling
+* Draft persistence using localStorage
+* Unsaved changes warning on refresh/back navigation
 
-1. Install dependencies:
+---
+
+## 기술 스택
+
+* **React**
+
+  * Suitable for building multi-step UI with reusable components and state management
+* **TypeScript**
+
+  * Ensures type safety and enables discriminated union for personal/group applications
+* **Vite**
+
+  * Fast development environment and optimized build performance
+
+---
+
+## 실행 방법
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. Start the development server:
+### 2. Run development server
 
 ```bash
 npm run dev
 ```
 
-3. Build for production:
+### 3. Build for production
 
 ```bash
 npm run build
 ```
 
-# Project Structure Description
+---
 
-```text
+## 프로젝트 구조 설명
+
+```
 src/
   api/
-    mockApi.ts                 # Mocked course list and enrollment submission logic
+    mockApi.ts                 # Mock API for courses and enrollment
   components/
-    CourseSelectionStep.tsx    # Step 1 UI
-    StudentInformationStep.tsx # Step 2 UI
-    ConfirmationStep.tsx       # Step 3 UI
-    CompletionScreen.tsx       # Success state
-    Field.tsx                  # Shared field shell
+    CourseSelectionStep.tsx    # Step 1
+    StudentInformationStep.tsx # Step 2
+    ConfirmationStep.tsx       # Step 3
+    CompletionScreen.tsx       # Success screen
+    Field.tsx                  # Reusable field component
     StepIndicator.tsx          # Progress indicator
   data/
     courses.ts                 # Mock course data
   hooks/
-    useUnsavedChangesGuard.ts  # beforeunload + back navigation warning
+    useUnsavedChangesGuard.ts  # Navigation warning logic
   lib/
-    draft.ts                   # Draft creation, reset policy, request payload builder
+    draft.ts                   # Draft state and payload builder
+    validation.ts              # Validation logic
+    storage.ts                 # localStorage handling
     format.ts                  # Formatting helpers
-    storage.ts                 # localStorage persistence
-    validation.ts              # Step-by-step validation logic
   types/
     course.ts
     enrollment.ts
-  App.tsx                      # Main orchestration
-  styles.css                   # Responsive styling
+  App.tsx                      # Main state and step control
+  styles.css                   # Styling and responsive layout
 ```
 
-# Requirement Interpretation and Assumptions
+---
 
-- Application type defaults to `personal`, but users can switch to `group` at any time from Step 1.
-- When switching from `group` to `personal`, group-only data is cleared after a confirmation dialog.
-  This is intentional so stale organization/headcount/participant data is never silently submitted on a personal application.
-- Group `headCount` is interpreted as the total number of seats requested for the group.
-- The participant list is optional in the sense that the roster may be incomplete at submission time, but every participant row that exists must be fully valid.
-- Participant email addresses must be unique within the participant list, and they also cannot reuse the main applicant email.
-- Full courses are shown but disabled in Step 1.
-  Near-capacity courses show a warning, and server-side capacity is still checked again on submit in case availability changes.
-- Duplicate enrollment detection is handled by submitted email overlap on the same course.
-  For groups, participant emails are also considered so the mock behaves more like a real enrollment safeguard.
-- The mock API is implemented in the client layer rather than as a separate mock server process.
-  It still mirrors the provided response and error shapes.
+## 요구사항 해석 및 가정
 
-# Design Decisions and Rationale
+* Application type defaults to **personal**
+* Switching from **group → personal clears group data** after user confirmation
+* Group headCount represents total seats requested
+* Participant list:
 
-- Centralized draft state in `App.tsx`
-  One draft object keeps every step in sync and guarantees data retention when moving backward.
-- Validation logic separated into `src/lib/validation.ts`
-  UI components stay focused on rendering, while the rules for step validation and error routing live in a single reusable place.
-- Discriminated request building in `src/lib/draft.ts`
-  The final API payload is constructed from the draft only after validation, which keeps the UI draft flexible and the submission payload strict.
-- Step-by-step validation strategy
-  Validation runs:
-  - when moving to the next step
-  - on blur for visible fields
-  - live after a step has already been attempted or touched
-- Server error handling
-  `COURSE_FULL` and `DUPLICATE_ENROLLMENT` remain on the confirmation step so the user can retry without losing context.
-  `INVALID_INPUT` with field-level details routes the user back to the relevant step and focuses the first invalid field.
-- Persistence strategy
-  Drafts are saved locally on every meaningful change and cleared after a successful submission.
-- Mobile UX
-  The layout collapses to a vertically stacked step flow on smaller screens instead of squeezing desktop columns.
+  * Can be partially filled
+  * Each row must be valid if present
+* Participant emails:
 
-# Unimplemented Features / Limitations
+  * Must be unique
+  * Must not match applicant email
+* Courses:
 
-- No automated test suite was added in this pass.
-  The project was verified with a production build, but unit/integration tests would be the next improvement.
-- The mock API is in-browser and backed by `localStorage`.
-  It is suitable for the assignment, but not a substitute for a real backend or a dedicated API mock server.
-- Browser back/close warnings rely on standard browser behavior.
-  Modern browsers limit the text/customization of unload dialogs, so the implementation uses the supported confirmation patterns only.
-- Accessibility was considered in structure and focus handling, but a full accessibility audit was not performed.
+  * Full → disabled
+  * Near capacity → warning shown
+* Server validation:
 
-# Scope of AI Usage
+  * Rechecked on submission (capacity & duplicate enrollment)
 
-AI was used to help draft and implement the project structure, validation logic, UI components, and README documentation.
+---
 
-Final code assembly, dependency installation, and production build verification were completed in the workspace during this session.
+## 설계 결정과 이유
+
+### 1. Centralized State Management
+
+A single draft state in `App.tsx` ensures:
+
+* Data persistence across steps
+* Easy back navigation without losing inputs
+
+### 2. Validation Separation
+
+Validation logic is implemented in `src/lib/validation.ts`:
+
+* Keeps UI components clean
+* Enables reuse and easier maintenance
+
+### 3. Discriminated Union Types
+
+Used for:
+
+* Personal vs Group application handling
+* Type-safe API request construction
+
+### 4. Step-based Validation Strategy
+
+Validation occurs:
+
+* On step transition
+* On field blur
+* Live after interaction
+
+This improves UX and prevents late-stage errors.
+
+### 5. Conditional Field Handling
+
+* Group-specific fields reset when switching to personal
+* Prevents stale/invalid data submission
+
+### 6. Persistence Strategy
+
+* Draft is saved in localStorage
+* Automatically restored on refresh
+* Cleared after successful submission
+
+### 7. Error Handling Design
+
+* **COURSE_FULL / DUPLICATE_ENROLLMENT**
+
+  * Stay on confirmation step
+  * Allow retry without data loss
+* **INVALID_INPUT**
+
+  * Redirects user to the relevant step
+  * Focuses the first invalid field
+
+---
+
+## 미구현 / 제약사항
+
+* No automated test cases (planned for future improvement)
+* Mock API is implemented on the client side only
+* Browser limitations restrict customization of unload warnings
+* Accessibility improvements can be further enhanced with audit tools
+
+---
+
+## AI 활용 범위
+
+AI was used for:
+
+* Structuring the project
+* Generating initial component patterns
+* Designing validation logic
+* Drafting documentation
+
+Manual work included:
+
+* Final integration
+* Debugging and validation flow adjustments
+* Build verification and testing
+* UX refinement decisions
